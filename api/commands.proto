@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package commands;
+
+option go_package = "memorabilia/api;api";
+
+service Commands {
+    rpc Echo (EchoRequest) returns (EchoResponse);
+}
+
+message EchoRequest {
+    string message = 1;
+}
+
+message EchoResponse {
+    string message = 1;
+}
