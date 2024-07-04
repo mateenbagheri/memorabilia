@@ -4,8 +4,12 @@ package commands;
 
 option go_package = "memorabilia/api;api";
 
+import "google/protobuf/empty.proto";
+
 service Commands {
     rpc Echo (EchoRequest) returns (EchoResponse);
+    rpc Set (SetRequest) returns (google.protobuf.Empty);
+    rpc Get (GetRequest) returns (GetResponse);
 }
 
 message EchoRequest {
@@ -14,4 +18,17 @@ message EchoRequest {
 
 message EchoResponse {
     string message = 1;
+}
+
+message SetRequest {
+    string id = 1;
+    string value = 2;
+}
+
+message GetRequest {
+    string id = 1;
+}
+
+message GetResponse {
+    string value = 1;
 }
