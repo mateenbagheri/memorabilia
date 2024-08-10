@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInMemoryCommandRepository_Set(t *testing.T) {
+func TestInMemoryCommandRepository_Set_Integer(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a new in-memory repository instance
@@ -16,7 +16,7 @@ func TestInMemoryCommandRepository_Set(t *testing.T) {
 		store: make(map[string]types.ColumnValue),
 	}
 
-	// Test case 1: Adding a new key with an integer value
+	// Adding a new key with an integer value
 	key1 := "intKey"
 	value1 := "123"
 
@@ -28,12 +28,21 @@ func TestInMemoryCommandRepository_Set(t *testing.T) {
 	assert.True(t, exists, "The key should exist in the store")
 	assert.Equal(t, types.IntType, storedValue1.Type(), "The stored value should be of IntType")
 	assert.Equal(t, 123, storedValue1.Value(), "The stored value should match the input value as an integer")
+}
 
-	// Test case 2: Adding a new key with a float value
+func TestInMemoryCommandRepository_Set_Float(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a new in-memory repository instance
+	imc := &InMemoryCommandRepository{
+		store: make(map[string]types.ColumnValue),
+	}
+
+	// Adding a new key with a float value
 	key2 := "floatKey"
 	value2 := "123.45"
 
-	err = imc.Set(ctx, key2, value2)
+	err := imc.Set(ctx, key2, value2)
 	assert.NoError(t, err, "Set should not return an error")
 
 	// Check if the key-value pair was correctly stored and its type is float
@@ -42,11 +51,21 @@ func TestInMemoryCommandRepository_Set(t *testing.T) {
 	assert.Equal(t, types.FloatType, storedValue2.Type(), "The stored value should be of FloatType")
 	assert.Equal(t, 123.45, storedValue2.Value(), "The stored value should match the input value as a float")
 
-	// Test case 3: Adding a new key with a string value
+}
+
+func TestInMemoryCommandRepository_Set_String(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a new in-memory repository instance
+	imc := &InMemoryCommandRepository{
+		store: make(map[string]types.ColumnValue),
+	}
+
+	// Adding a new key with a string value
 	key3 := "stringKey"
 	value3 := "hello"
 
-	err = imc.Set(ctx, key3, value3)
+	err := imc.Set(ctx, key3, value3)
 	assert.NoError(t, err, "Set should not return an error")
 
 	// Check if the key-value pair was correctly stored and its type is string
@@ -54,9 +73,24 @@ func TestInMemoryCommandRepository_Set(t *testing.T) {
 	assert.True(t, exists, "The key should exist in the store")
 	assert.Equal(t, types.StringType, storedValue3.Type(), "The stored value should be of StringType")
 	assert.Equal(t, "hello", storedValue3.Value(), "The stored value should match the input value as a string")
+}
 
-	// Test case 4: Updating an existing key with a new value
+func TestInMemoryCommandRepository_Set_ExistingValue(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a new in-memory repository instance
+	imc := &InMemoryCommandRepository{
+		store: make(map[string]types.ColumnValue),
+	}
+
+	// Updating an existing key with a new value
 	newValue := "456"
+
+	key1 := "intKey"
+	value1 := "123"
+
+	err := imc.Set(ctx, key1, value1)
+	assert.NoError(t, err, "Set should not return an error")
 
 	err = imc.Set(ctx, key1, newValue)
 	assert.NoError(t, err, "Set should not return an error")
