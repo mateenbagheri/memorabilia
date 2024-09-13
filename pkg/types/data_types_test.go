@@ -1,23 +1,28 @@
 package types
 
 import (
+	"strconv"
 	"testing"
+
+	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
 )
 
 func TestInteger_ToInt(t *testing.T) {
-	i := Integer{Val: 42}
-	if got, err := i.ToInt(); err != nil || got != 42 {
+	integer := testutil.GenerateRandomInteger(0, 1000)
+	i := Integer{Val: integer}
+	if got, err := i.ToInt(); err != nil || got != integer {
 		if err != nil {
 			t.Errorf("Expected no errors but got following error = %v", err)
 		}
-		t.Errorf("ToInt() = %v, want %v", got, 42)
+		t.Errorf("ToInt() = %v, want %v", got, integer)
 	}
 }
 
 func TestInteger_ToString(t *testing.T) {
-	i := Integer{Val: 42}
-	if got := i.ToString(); got != "42" {
-		t.Errorf("ToString() = %v, want %v", got, "42")
+	integer := testutil.GenerateRandomInteger(0, 1000)
+	i := Integer{Val: integer}
+	if got := i.ToString(); got != strconv.Itoa(integer) {
+		t.Errorf("ToString() = %v, want %v", got, strconv.Itoa(integer))
 	}
 }
 
@@ -34,9 +39,10 @@ func TestInteger_ToFloat(t *testing.T) {
 }
 
 func TestString_ToString(t *testing.T) {
-	s := String{Val: "hello"}
-	if got := s.ToString(); got != "hello" {
-		t.Errorf("ToString() = %v, want %v", got, "hello")
+	stringValue := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 100))
+	s := String{Val: stringValue}
+	if got := s.ToString(); got != stringValue {
+		t.Errorf("ToString() = %v, want %v", got, stringValue)
 	}
 }
 
@@ -93,14 +99,14 @@ func TestString_ToFloat(t *testing.T) {
 }
 
 func TestString_Type(t *testing.T) {
-	s := String{Val: "test"}
+	s := String{Val: testutil.GenerateRandomString(10)}
 	if got := s.Type(); got != StringType {
 		t.Errorf("Type() = %v, want %v", got, StringType)
 	}
 }
 
 func TestInteger_Type(t *testing.T) {
-	i := Integer{Val: 42}
+	i := Integer{Val: testutil.GenerateRandomInteger(0, 100)}
 	if got := i.Type(); got != IntType {
 		t.Errorf("Type() = %v, want %v", got, IntType)
 	}
@@ -114,16 +120,18 @@ func TestFloat_Type(t *testing.T) {
 }
 
 func TestInteger_Value(t *testing.T) {
-	i := Integer{Val: 42}
-	if got := i.Value(); got != 42 {
-		t.Errorf("Value() = %v, want %v", got, 42)
+	integerValue := testutil.GenerateRandomInteger(0, 100)
+	i := Integer{Val: integerValue}
+	if got := i.Value(); got != integerValue {
+		t.Errorf("Value() = %v, want %v", got, integerValue)
 	}
 }
 
 func TestString_Value(t *testing.T) {
-	s := String{Val: "hello"}
-	if got := s.Value(); got != "hello" {
-		t.Errorf("Value() = %v, want %v", got, "hello")
+	stringValue := testutil.GenerateRandomString(10)
+	s := String{Val: stringValue}
+	if got := s.Value(); got != stringValue {
+		t.Errorf("Value() = %v, want %v", got, stringValue)
 	}
 }
 

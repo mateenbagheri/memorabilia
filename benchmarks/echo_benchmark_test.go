@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
-	"github.com/mateenbagheri/memorabilia/pkg/utils"
+	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
 	"github.com/mateenbagheri/memorabilia/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,7 +32,7 @@ func BenchmarkEcho(b *testing.B) {
 
 	// Benchmark the Echo method
 	for i := 0; i < b.N; i++ {
-		randomMessage := utils.GenerateRandomString(utils.GenerateRandomNumber(0, 100))
+		randomMessage := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 100))
 		_, err := c.Echo(ctx, &api.EchoRequest{Message: randomMessage})
 		if err != nil {
 			b.Fatalf("error while calling echo: %v", err)

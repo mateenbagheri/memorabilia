@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
-	"github.com/mateenbagheri/memorabilia/pkg/utils"
+	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -17,7 +17,7 @@ import (
 func TestCommandServer_Echo_RandomString(t *testing.T) {
 	server := NewCommandServer()
 
-	echoMessage := utils.GenerateRandomString(utils.GenerateRandomNumber(0, 10))
+	echoMessage := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 10))
 	req := &api.EchoRequest{Message: echoMessage}
 	resp, err := server.Echo(context.Background(), req)
 
@@ -54,7 +54,7 @@ func TestEcho_Integration(t *testing.T) {
 	defer cancel()
 
 	// Generate a random message
-	randomMessage := utils.GenerateRandomString(utils.GenerateRandomNumber(0, 100))
+	randomMessage := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 100))
 
 	// Test the Echo method
 	r, err := c.Echo(ctx, &api.EchoRequest{Message: randomMessage})
