@@ -1,4 +1,4 @@
-package utils
+package testutil
 
 import (
 	"math/rand"
@@ -17,7 +17,7 @@ func GenerateRandomString(length int) string {
 	return string(b)
 }
 
-// GenerateRandomNumber generates a random number between min and max
-func GenerateRandomNumber(min, max int) int {
+// GenerateRandomInteger generates a random number between min and max
+func GenerateRandomInteger(min, max int) int {
 	return rand.Intn(max-min+1) + min
 }
