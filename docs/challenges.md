@@ -24,3 +24,10 @@ To ensure that any future changes to the data structure are seamless and maintai
 Another concern is maintaining data consistency during concurrent read and write operations on the map. To address this, we have implemented an RWMutex to prevent race conditions and ensure thread-safe access to the data.
 
 Additionally, a key challenge that led us to consider designing a custom type system is the lack of a clean, built-in method in Go for defining a map that can store multiple types of data as values. Even with the use of generics, this issue persists, as initializing a map requires specifying a single data type, which does not align with our requirements.
+
+### 4. TTL
+To design a TTL (Time-To-Live) implementation for memorabilia, I considered two different approaches:
+1. Launching a goroutine that continuously monitors TTL for all keys.
+2. Checking the TTL only when retrieving values. This approach, however, could lead to memory overflow if handling a large volume of data. To address this, in addition to verifying TTL at retrieval, I would allow the user to set a time interval for a cron job to run and remove expired data.
+I chose the second approach, as it appeared to be less resource-intensive than a continuous check for expired values in real time.
+After considering whether to implement a cron job utility from scratch or use an external package, I decided to use [robfig/cron](https://github.com/robfig/cron). While building a cron job utility could be interesting, it's not my primary focus for the current development phase. I implemented this feature following a repository pattern, allowing flexibility to switch cron job packages or even create a custom implementation in the future if needed.
