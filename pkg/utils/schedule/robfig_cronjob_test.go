@@ -1,12 +1,17 @@
 package schedule
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// 50 millisecond is a threshold for OneSecond
+const OneSecond = 1*time.Second + 50*time.Millisecond
 
 func TestRobfigCronjobRepository_StartStop(t *testing.T) {
 	scheduler := GetRobfigSchedulerInstance()
@@ -39,7 +44,33 @@ func TestRobfigCronjobRepository_RemoveJob(t *testing.T) {
 }
 
 func TestRobfigCronjobRepository_ScheduleIntervalJob(t *testing.T) {
+	scheduler := GetRobfigSchedulerInstance()
 
+	scheduler.Start()
+	defer scheduler.Stop()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	counter := int32(0)
+	scheduler.ScheduleIntervalJob("1s", func() {
+		// reason for using atomic here is to make sure this particular job is ran once in 3 seconds
+		if atomic.AddInt32(&counter, 1) <= 2 {
+			wg.Done()
+		}
+	})
+
+	scheduler.ScheduleIntervalJob("2s", func() {
+		if atomic.AddInt32(&counter, 1) <= 2 {
+			wg.Done()
+		}
+	})
+
+	select {
+	case <-time.After(3 * OneSecond):
+		t.Error("expected two jobs to be fired")
+	case <-wait(wg):
+	}
 }
 
 func TestRobfigCronjobRepository_Listjobs(t *testing.T) {
@@ -88,4 +119,13 @@ func TestRobfigCronjobRepository_Listjobs(t *testing.T) {
 
 	assert.NotEqual(t, jobIds[job1Id].NextRun, time.Time{})
 	assert.NotEqual(t, jobIds[job2Id].NextRun, time.Time{})
+}
+
+func wait(wg *sync.WaitGroup) chan bool {
+	ch := make(chan bool)
+	go func() {
+		wg.Wait()
+		ch <- true
+	}()
+	return ch
 }

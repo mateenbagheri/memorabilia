@@ -43,6 +43,21 @@ func GetRobfigSchedulerInstance() *RobfigCronjobRepository {
 	return instance
 }
 
+// ScheduleIntervalJob schedules a recurring job at intervals defined by the provided time expression (`timeExpr`).
+//
+// Parameters:
+//   - timeExpr: A string defining the interval at which the job should run.
+//     The format is similar to "1h", "30m", "15s" for hours, minutes, and seconds respectively.
+//   - job: A function that will be executed at the specified interval.
+//
+// Returns:
+//   - jobId: A unique string identifier for the scheduled job. If scheduling fails, this will be an empty string.
+//   - err:   An error if scheduling fails. Possible reasons include invalid `timeExpr` or issues with the scheduler.
+//
+// Notes:
+//   - If `timeExpr` is invalid, an error will be returned.
+//   - If the job scheduling fails, an error is returned along with an empty `jobId`.
+//   - This method is thread-safe; it uses a mutex to protect shared resources.
 func (cj *RobfigCronjobRepository) ScheduleIntervalJob(timeExpr string, job func()) (jobId string, err error) {
 	cj.mu.Lock()
 	defer cj.mu.Unlock()
