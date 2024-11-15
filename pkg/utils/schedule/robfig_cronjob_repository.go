@@ -3,6 +3,7 @@ package schedule
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/mateenbagheri/memorabilia/pkg/utils/validation"
@@ -93,11 +94,13 @@ func (cj *RobfigCronjobRepository) RemoveJob(jobId string) error {
 
 func (cj *RobfigCronjobRepository) Start() error {
 	cj.scheduler.Start()
+	slog.Info("successfully started cronjob instance using robfig_cron package")
 	return nil
 }
 
 func (cj *RobfigCronjobRepository) Stop() error {
 	cj.scheduler.Stop()
+	slog.Info("successfully stoped cronjob instance")
 	return nil
 }
 
