@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
 	"github.com/mateenbagheri/memorabilia/pkg/core"
@@ -31,7 +32,8 @@ func (s *CommandServer) Get(ctx context.Context, in *api.GetRequest) (*api.GetRe
 }
 
 func (s *CommandServer) Set(ctx context.Context, in *api.SetRequest) (*emptypb.Empty, error) {
-	err := inMemoryCommandRepository.Set(ctx, in.Id, in.Value)
+	expiration := time.Now().Add(time.Millisecond * time.Duration(in.Ttl))
+	err := inMemoryCommandRepository.Set(ctx, in.Id, in.Value, expiration)
 	if err != nil {
 		return nil, err
 	}

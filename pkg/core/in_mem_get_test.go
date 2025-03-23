@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/mateenbagheri/memorabilia/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -13,12 +14,12 @@ func TestInMemoryCommandRepository_Get_ExistingInteger(t *testing.T) {
 
 	// Create a new in-memory repository instance
 	imc := &InMemoryCommandRepository{
-		store: make(map[string]types.ColumnValue),
+		store: make(map[string]types.ColumnValueWithTTL),
 	}
 
 	key1 := "intKey"
 	value1 := "123"
-	imc.Set(ctx, key1, value1)
+	imc.Set(ctx, key1, value1, time.Time{})
 
 	result, err := imc.Get(ctx, key1)
 	assert.NoError(t, err, "Get should not return an error for existing key")
@@ -30,12 +31,12 @@ func TestInMemoryCommandRepository_Get_ExistingFloat(t *testing.T) {
 
 	// Create a new in-memory repository instance
 	imc := &InMemoryCommandRepository{
-		store: make(map[string]types.ColumnValue),
+		store: make(map[string]types.ColumnValueWithTTL),
 	}
 
 	key2 := "floatKey"
 	value2 := "123.45"
-	imc.Set(ctx, key2, value2)
+	imc.Set(ctx, key2, value2, time.Time{})
 
 	result, err := imc.Get(ctx, key2)
 	assert.NoError(t, err, "Get should not return an error for existing key")
@@ -47,12 +48,12 @@ func TestInMemoryCommandRepository_Get_ExistingString(t *testing.T) {
 
 	// Create a new in-memory repository instance
 	imc := &InMemoryCommandRepository{
-		store: make(map[string]types.ColumnValue),
+		store: make(map[string]types.ColumnValueWithTTL),
 	}
 
 	key3 := "stringKey"
 	value3 := "hello"
-	imc.Set(ctx, key3, value3)
+	imc.Set(ctx, key3, value3, time.Time{})
 
 	result, err := imc.Get(ctx, key3)
 	assert.NoError(t, err, "Get should not return an error for existing key")
@@ -64,7 +65,7 @@ func TestInMemoryCommandRepository_Get_NonExistantValue_ErrNotFound(t *testing.T
 
 	// Create a new in-memory repository instance
 	imc := &InMemoryCommandRepository{
-		store: make(map[string]types.ColumnValue),
+		store: make(map[string]types.ColumnValueWithTTL),
 	}
 
 	missingKey := "missingKey"

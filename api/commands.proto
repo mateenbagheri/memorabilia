@@ -23,6 +23,7 @@ message EchoResponse {
 message SetRequest {
     string id = 1;
     string value = 2;
+    int64 ttl = 3;
 }
 
 message GetRequest {
