@@ -74,3 +74,67 @@ func TestInMemoryCommandRepository_Get_NonExistantValue_ErrNotFound(t *testing.T
 	assert.Equal(t, ErrNotFound, err, "The error should be ErrNotFound")
 	assert.Equal(t, "", result, "The returned value should be an empty string when the key is not found")
 }
+
+func TestInMemoryCommandRepository_Get_UnexpiredValue(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a new in-memory repository instance
+	imc := &InMemoryCommandRepository{
+		store: make(map[string]types.ColumnValueWithTTL),
+	}
+
+	key := "expiration_unexpired_test"
+	value := "hello-kitty"
+	expiration := time.Now().Add(3000 * time.Millisecond) // Set expiration to 3 seconds in the future
+
+	// Set the key-value pair with an expiration time
+	err := imc.Set(ctx, key, value, expiration)
+	if err != nil {
+		t.Fatalf("Failed to set key-value pair: %v", err)
+	}
+
+	// Test case 1: Retrieve the value immediately after setting it (no wait)
+	t.Run("Retrieve immediately", func(t *testing.T) {
+		retrievedValue, err := imc.Get(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed to get key: %v", err)
+		}
+
+		// Verify that the retrieved value matches the original value
+		if retrievedValue != value {
+			t.Errorf("Expected value %q, got %q", value, retrievedValue)
+		}
+	})
+
+	// Test case 2: Retrieve the value after waiting for 2 seconds (less than the expiration time)
+	t.Run("Retrieve before expiration", func(t *testing.T) {
+		waitChan := time.After(2000 * time.Millisecond) // Wait for 2 seconds
+		<-waitChan
+
+		retrievedValue, err := imc.Get(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed to get key: %v", err)
+		}
+
+		// Verify that the retrieved value matches the original value
+		if retrievedValue != value {
+			t.Errorf("Expected value %q, got %q", value, retrievedValue)
+		}
+	})
+
+	// Test case 3: Retrieve the value after waiting for 4 seconds (longer than the expiration time)
+	t.Run("Retrieve after expiration", func(t *testing.T) {
+		waitChan := time.After(4000 * time.Millisecond) // Wait for 4 seconds
+		<-waitChan
+
+		retrievedValue, err := imc.Get(ctx, key)
+		if err == nil || err != ErrKeyExpired {
+			t.Fatalf("Expected ErrKeyExpired, got: %v", err)
+		}
+
+		// Verify that no value is returned
+		if retrievedValue != "" {
+			t.Errorf("Expected empty value, got %q", retrievedValue)
+		}
+	})
+}
