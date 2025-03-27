@@ -14,7 +14,7 @@ clean:
 	rm -f $(PROTO_OUT)/api/*.pb.go
 
 test:
-	go test ./server -v
+	go test ./... -v
 
 bench:
 	go test -bench . ./benchmarks
