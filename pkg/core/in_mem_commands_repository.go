@@ -6,7 +6,7 @@ import (
 	"github.com/mateenbagheri/memorabilia/pkg/types"
 )
 
-var _ CommandRepository = (*InMemoryCommandRepository)(nil)
+var _ CommandsRepository = (*InMemoryCommandRepository)(nil)
 
 // InMemoryCommandRepository is an in-memory implementation of CommandRepository.
 type InMemoryCommandRepository struct {
@@ -17,5 +17,11 @@ type InMemoryCommandRepository struct {
 func NewInMemoryCommandRepository() *InMemoryCommandRepository {
 	return &InMemoryCommandRepository{
 		store: make(map[string]types.ColumnValueWithTTL),
+	}
+}
+
+func NewInMemoryCommandRepositoryWithInitialStore(store map[string]types.ColumnValueWithTTL) *InMemoryCommandRepository {
+	return &InMemoryCommandRepository{
+		store: store,
 	}
 }

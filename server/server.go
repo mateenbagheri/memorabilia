@@ -70,10 +70,8 @@ func (s *Server) Start() {
 		return
 	}
 
-	s.scheduler.Start()
-	defer s.scheduler.Stop()
-
-	api.RegisterCommandsServer(s.grpcServer, NewCommandServer())
+	commandServer := NewCommandServer()
+	api.RegisterCommandsServer(s.grpcServer, commandServer)
 
 	// Channel to catch OS signals
 	stop := make(chan os.Signal, 1)

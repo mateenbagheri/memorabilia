@@ -38,8 +38,8 @@ type ColumnValue interface {
 
 // ColumnValueWithTTL is a struct designed for storing Column data assocoated with its expiration.
 type ColumnValueWithTTL struct {
-	Column    ColumnValue
-	Epiration time.Time
+	Column     ColumnValue
+	Expiration time.Time
 }
 
 // Integer represents a column value of integer type.

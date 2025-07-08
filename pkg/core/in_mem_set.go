@@ -28,8 +28,8 @@ func (imc *InMemoryCommandRepository) Set(
 	defer imc.mu.Unlock()
 	_, columnValue := types.DetectColumnType(value)
 	imc.store[key] = types.ColumnValueWithTTL{
-		Column:    columnValue,
-		Epiration: expiration,
+		Column:     columnValue,
+		Expiration: expiration,
 	}
 	return nil
 }

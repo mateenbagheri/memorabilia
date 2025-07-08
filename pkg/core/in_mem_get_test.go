@@ -60,7 +60,7 @@ func TestInMemoryCommandRepository_Get_ExistingString(t *testing.T) {
 	assert.Equal(t, "hello", result, "The returned value should match the stored value as a string")
 }
 
-func TestInMemoryCommandRepository_Get_NonExistantValue_ErrNotFound(t *testing.T) {
+func TestInMemoryCommandRepository_Get_NonExistantValue_ErrKeyNotFoundForDeleteOp(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a new in-memory repository instance
@@ -71,7 +71,7 @@ func TestInMemoryCommandRepository_Get_NonExistantValue_ErrNotFound(t *testing.T
 	missingKey := "missingKey"
 	result, err := imc.Get(ctx, missingKey)
 	assert.Error(t, err, "Get should return an error for a non-existing key")
-	assert.Equal(t, ErrNotFound, err, "The error should be ErrNotFound")
+	assert.Equal(t, ErrNotFoundForGetOp, err, "The error should be ErrNotFoundForGetOp")
 	assert.Equal(t, "", result, "The returned value should be an empty string when the key is not found")
 }
 
@@ -128,7 +128,7 @@ func TestInMemoryCommandRepository_Get_UnexpiredValue(t *testing.T) {
 		<-waitChan
 
 		retrievedValue, err := imc.Get(ctx, key)
-		if err == nil || err != ErrKeyExpired {
+		if err == nil || err != ErrKeyExpiredForGetOp {
 			t.Fatalf("Expected ErrKeyExpired, got: %v", err)
 		}
 

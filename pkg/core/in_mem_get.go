@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("value for given key was not found")
-var ErrKeyExpired = errors.New("the given key has expired")
+var ErrNotFoundForGetOp = errors.New("value for given key was not found")
+var ErrKeyExpiredForGetOp = errors.New("the given key has expired")
 
 // Get retrieves the value associated with the provided key from the in-memory store.
 // It ensures thread safety by locking the repository for reading during the operation.
@@ -24,11 +24,11 @@ func (imc *InMemoryCommandRepository) Get(ctx context.Context, key string) (valu
 	defer imc.mu.RUnlock()
 	valueWithTTL, ok := imc.store[key]
 	if !ok {
-		return "", ErrNotFound
+		return "", ErrNotFoundForGetOp
 	}
 
-	if !valueWithTTL.Epiration.IsZero() && time.Now().After(valueWithTTL.Epiration) {
-		return "", ErrKeyExpired
+	if !valueWithTTL.Expiration.IsZero() && time.Now().After(valueWithTTL.Expiration) {
+		return "", ErrKeyExpiredForGetOp
 	}
 
 	return valueWithTTL.Column.ToString(), nil
