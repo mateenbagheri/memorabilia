@@ -49,3 +49,11 @@ func (s *CommandServer) BatchDelete(ctx context.Context, in *api.BatchDeleteRequ
 	deleteCount := inMemoryCommandRepository.BatchDelete(ctx, in.GetIds())
 	return &api.BatchDeleteResponse{DeleteCount: deleteCount}, nil
 }
+
+func (s *CommandServer) GetExpiredKeys(ctx context.Context, in *emptypb.Empty) (*api.GetExpiredKeysResponse, error) {
+	expiredKeys, err := inMemoryCommandRepository.GetExpiredKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &api.GetExpiredKeysResponse{Ids: expiredKeys}, err
+}
