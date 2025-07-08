@@ -302,6 +302,50 @@ func (x *DeleteRequest) GetId() string {
 	return ""
 }
 
+type DeleteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeleteCount   int64                  `protobuf:"varint,1,opt,name=delete_count,json=deleteCount,proto3" json:"delete_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	mi := &file_api_commands_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteResponse) ProtoMessage() {}
+
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_commands_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_api_commands_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DeleteResponse) GetDeleteCount() int64 {
+	if x != nil {
+		return x.DeleteCount
+	}
+	return 0
+}
+
 type BatchDeleteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
@@ -311,7 +355,7 @@ type BatchDeleteRequest struct {
 
 func (x *BatchDeleteRequest) Reset() {
 	*x = BatchDeleteRequest{}
-	mi := &file_api_commands_proto_msgTypes[6]
+	mi := &file_api_commands_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -323,7 +367,7 @@ func (x *BatchDeleteRequest) String() string {
 func (*BatchDeleteRequest) ProtoMessage() {}
 
 func (x *BatchDeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_commands_proto_msgTypes[6]
+	mi := &file_api_commands_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -336,7 +380,7 @@ func (x *BatchDeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchDeleteRequest.ProtoReflect.Descriptor instead.
 func (*BatchDeleteRequest) Descriptor() ([]byte, []int) {
-	return file_api_commands_proto_rawDescGZIP(), []int{6}
+	return file_api_commands_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BatchDeleteRequest) GetIds() []string {
@@ -344,6 +388,50 @@ func (x *BatchDeleteRequest) GetIds() []string {
 		return x.Ids
 	}
 	return nil
+}
+
+type BatchDeleteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeleteCount   int64                  `protobuf:"varint,1,opt,name=deleteCount,proto3" json:"deleteCount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchDeleteResponse) Reset() {
+	*x = BatchDeleteResponse{}
+	mi := &file_api_commands_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchDeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchDeleteResponse) ProtoMessage() {}
+
+func (x *BatchDeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_commands_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchDeleteResponse.ProtoReflect.Descriptor instead.
+func (*BatchDeleteResponse) Descriptor() ([]byte, []int) {
+	return file_api_commands_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *BatchDeleteResponse) GetDeleteCount() int64 {
+	if x != nil {
+		return x.DeleteCount
+	}
+	return 0
 }
 
 type GetExpiredKeysResponse struct {
@@ -355,7 +443,7 @@ type GetExpiredKeysResponse struct {
 
 func (x *GetExpiredKeysResponse) Reset() {
 	*x = GetExpiredKeysResponse{}
-	mi := &file_api_commands_proto_msgTypes[7]
+	mi := &file_api_commands_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +455,7 @@ func (x *GetExpiredKeysResponse) String() string {
 func (*GetExpiredKeysResponse) ProtoMessage() {}
 
 func (x *GetExpiredKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_commands_proto_msgTypes[7]
+	mi := &file_api_commands_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +468,7 @@ func (x *GetExpiredKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExpiredKeysResponse.ProtoReflect.Descriptor instead.
 func (*GetExpiredKeysResponse) Descriptor() ([]byte, []int) {
-	return file_api_commands_proto_rawDescGZIP(), []int{7}
+	return file_api_commands_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetExpiredKeysResponse) GetIds() []string {
@@ -410,17 +498,21 @@ const file_api_commands_proto_rawDesc = "" +
 	"\vGetResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"\x1f\n" +
 	"\rDeleteRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"&\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"3\n" +
+	"\x0eDeleteResponse\x12!\n" +
+	"\fdelete_count\x18\x01 \x01(\x03R\vdeleteCount\"&\n" +
 	"\x12BatchDeleteRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"*\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"7\n" +
+	"\x13BatchDeleteResponse\x12 \n" +
+	"\vdeleteCount\x18\x01 \x01(\x03R\vdeleteCount\"*\n" +
 	"\x16GetExpiredKeysResponse\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids2\xf6\x02\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids2\xff\x02\n" +
 	"\bCommands\x125\n" +
 	"\x04Echo\x12\x15.commands.EchoRequest\x1a\x16.commands.EchoResponse\x123\n" +
 	"\x03Set\x12\x14.commands.SetRequest\x1a\x16.google.protobuf.Empty\x122\n" +
-	"\x03Get\x12\x14.commands.GetRequest\x1a\x15.commands.GetResponse\x129\n" +
-	"\x06Delete\x12\x17.commands.DeleteRequest\x1a\x16.google.protobuf.Empty\x12C\n" +
-	"\vBatchDelete\x12\x1c.commands.BatchDeleteRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\x03Get\x12\x14.commands.GetRequest\x1a\x15.commands.GetResponse\x12;\n" +
+	"\x06Delete\x12\x17.commands.DeleteRequest\x1a\x18.commands.DeleteResponse\x12J\n" +
+	"\vBatchDelete\x12\x1c.commands.BatchDeleteRequest\x1a\x1d.commands.BatchDeleteResponse\x12J\n" +
 	"\x0eGetExpiredKeys\x12\x16.google.protobuf.Empty\x1a .commands.GetExpiredKeysResponseB\x15Z\x13memorabilia/api;apib\x06proto3"
 
 var (
@@ -435,7 +527,7 @@ func file_api_commands_proto_rawDescGZIP() []byte {
 	return file_api_commands_proto_rawDescData
 }
 
-var file_api_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_api_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_api_commands_proto_goTypes = []any{
 	(*EchoRequest)(nil),            // 0: commands.EchoRequest
 	(*EchoResponse)(nil),           // 1: commands.EchoResponse
@@ -443,28 +535,30 @@ var file_api_commands_proto_goTypes = []any{
 	(*GetRequest)(nil),             // 3: commands.GetRequest
 	(*GetResponse)(nil),            // 4: commands.GetResponse
 	(*DeleteRequest)(nil),          // 5: commands.DeleteRequest
-	(*BatchDeleteRequest)(nil),     // 6: commands.BatchDeleteRequest
-	(*GetExpiredKeysResponse)(nil), // 7: commands.GetExpiredKeysResponse
-	(*emptypb.Empty)(nil),          // 8: google.protobuf.Empty
+	(*DeleteResponse)(nil),         // 6: commands.DeleteResponse
+	(*BatchDeleteRequest)(nil),     // 7: commands.BatchDeleteRequest
+	(*BatchDeleteResponse)(nil),    // 8: commands.BatchDeleteResponse
+	(*GetExpiredKeysResponse)(nil), // 9: commands.GetExpiredKeysResponse
+	(*emptypb.Empty)(nil),          // 10: google.protobuf.Empty
 }
 var file_api_commands_proto_depIdxs = []int32{
-	0, // 0: commands.Commands.Echo:input_type -> commands.EchoRequest
-	2, // 1: commands.Commands.Set:input_type -> commands.SetRequest
-	3, // 2: commands.Commands.Get:input_type -> commands.GetRequest
-	5, // 3: commands.Commands.Delete:input_type -> commands.DeleteRequest
-	6, // 4: commands.Commands.BatchDelete:input_type -> commands.BatchDeleteRequest
-	8, // 5: commands.Commands.GetExpiredKeys:input_type -> google.protobuf.Empty
-	1, // 6: commands.Commands.Echo:output_type -> commands.EchoResponse
-	8, // 7: commands.Commands.Set:output_type -> google.protobuf.Empty
-	4, // 8: commands.Commands.Get:output_type -> commands.GetResponse
-	8, // 9: commands.Commands.Delete:output_type -> google.protobuf.Empty
-	8, // 10: commands.Commands.BatchDelete:output_type -> google.protobuf.Empty
-	7, // 11: commands.Commands.GetExpiredKeys:output_type -> commands.GetExpiredKeysResponse
-	6, // [6:12] is the sub-list for method output_type
-	0, // [0:6] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: commands.Commands.Echo:input_type -> commands.EchoRequest
+	2,  // 1: commands.Commands.Set:input_type -> commands.SetRequest
+	3,  // 2: commands.Commands.Get:input_type -> commands.GetRequest
+	5,  // 3: commands.Commands.Delete:input_type -> commands.DeleteRequest
+	7,  // 4: commands.Commands.BatchDelete:input_type -> commands.BatchDeleteRequest
+	10, // 5: commands.Commands.GetExpiredKeys:input_type -> google.protobuf.Empty
+	1,  // 6: commands.Commands.Echo:output_type -> commands.EchoResponse
+	10, // 7: commands.Commands.Set:output_type -> google.protobuf.Empty
+	4,  // 8: commands.Commands.Get:output_type -> commands.GetResponse
+	6,  // 9: commands.Commands.Delete:output_type -> commands.DeleteResponse
+	8,  // 10: commands.Commands.BatchDelete:output_type -> commands.BatchDeleteResponse
+	9,  // 11: commands.Commands.GetExpiredKeys:output_type -> commands.GetExpiredKeysResponse
+	6,  // [6:12] is the sub-list for method output_type
+	0,  // [0:6] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_api_commands_proto_init() }
@@ -478,7 +572,7 @@ func file_api_commands_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_commands_proto_rawDesc), len(file_api_commands_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -35,8 +35,8 @@ type CommandsClient interface {
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
-	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	BatchDelete(ctx context.Context, in *BatchDeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	BatchDelete(ctx context.Context, in *BatchDeleteRequest, opts ...grpc.CallOption) (*BatchDeleteResponse, error)
 	GetExpiredKeys(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetExpiredKeysResponse, error)
 }
 
@@ -78,9 +78,9 @@ func (c *commandsClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.C
 	return out, nil
 }
 
-func (c *commandsClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *commandsClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, Commands_Delete_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -88,9 +88,9 @@ func (c *commandsClient) Delete(ctx context.Context, in *DeleteRequest, opts ...
 	return out, nil
 }
 
-func (c *commandsClient) BatchDelete(ctx context.Context, in *BatchDeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *commandsClient) BatchDelete(ctx context.Context, in *BatchDeleteRequest, opts ...grpc.CallOption) (*BatchDeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(BatchDeleteResponse)
 	err := c.cc.Invoke(ctx, Commands_BatchDelete_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -115,8 +115,8 @@ type CommandsServer interface {
 	Echo(context.Context, *EchoRequest) (*EchoResponse, error)
 	Set(context.Context, *SetRequest) (*emptypb.Empty, error)
 	Get(context.Context, *GetRequest) (*GetResponse, error)
-	Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error)
-	BatchDelete(context.Context, *BatchDeleteRequest) (*emptypb.Empty, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	BatchDelete(context.Context, *BatchDeleteRequest) (*BatchDeleteResponse, error)
 	GetExpiredKeys(context.Context, *emptypb.Empty) (*GetExpiredKeysResponse, error)
 	mustEmbedUnimplementedCommandsServer()
 }
@@ -137,10 +137,10 @@ func (UnimplementedCommandsServer) Set(context.Context, *SetRequest) (*emptypb.E
 func (UnimplementedCommandsServer) Get(context.Context, *GetRequest) (*GetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedCommandsServer) Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error) {
+func (UnimplementedCommandsServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (UnimplementedCommandsServer) BatchDelete(context.Context, *BatchDeleteRequest) (*emptypb.Empty, error) {
+func (UnimplementedCommandsServer) BatchDelete(context.Context, *BatchDeleteRequest) (*BatchDeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchDelete not implemented")
 }
 func (UnimplementedCommandsServer) GetExpiredKeys(context.Context, *emptypb.Empty) (*GetExpiredKeysResponse, error) {

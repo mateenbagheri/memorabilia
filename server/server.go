@@ -53,7 +53,7 @@ func New(options ...Option) *Server {
 		logger:         slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})),
 		grpcServer:     grpc.NewServer(),
 		scheduler:      schedule.GetRobfigSchedulerInstance(),
-		ttlCleanupTime: 4000, // TODO: tweak this later on
+		ttlCleanupTime: 4000, // TODO: tweak this later on also add env set to this.
 	}
 
 	for _, opt := range options {
