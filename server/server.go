@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -105,8 +106,9 @@ func (s *Server) Start() {
 }
 
 func (s *Server) ScheduleCleanup() {
-	s.scheduler.ScheduleIntervalJob("20s", func() {
-		s.logger.Info("Running TTL cleanup job...")
+	cleanUpTimeIntervalInSeconds := s.ttlCleanupTime / 1000
+	s.scheduler.ScheduleIntervalJob(fmt.Sprintf("%ds", cleanUpTimeIntervalInSeconds), func() {
+		s.logger.Info("Running TTL cleanup job ...", slog.Int64("interval in seconds", cleanUpTimeIntervalInSeconds))
 
 		// Create a dedicated new context for the cleanup task
 		// Note: This is a dedicated ctx because ScheduleCleanup is
