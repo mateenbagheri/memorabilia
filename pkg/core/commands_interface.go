@@ -13,4 +13,5 @@ type CommandsRepository interface {
 	BatchDelete(ctx context.Context, keys []string) (deleteCount int64)
 	Delete(ctx context.Context, key string) (deleteCount int64)
 	GetExpiredKeys(ctx context.Context) (keys []string, err error)
+	Cleanup(ctx context.Context) (deleteCount int64, err error)
 }
