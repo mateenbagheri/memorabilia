@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
+	"github.com/mateenbagheri/memorabilia/pkg/core"
 	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
 	"github.com/mateenbagheri/memorabilia/server"
 	"google.golang.org/grpc"
@@ -56,7 +57,8 @@ func startBenchmarkServer(b *testing.B) (*grpc.Server, chan error) {
 	}
 
 	s := grpc.NewServer()
-	api.RegisterCommandsServer(s, server.NewCommandServer())
+	repo := core.NewInMemoryCommandRepository()
+	api.RegisterCommandsServer(s, server.NewCommandServer(repo))
 
 	errCh := make(chan error, 1)
 	go func() {

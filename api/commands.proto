@@ -10,6 +10,9 @@ service Commands {
     rpc Echo (EchoRequest) returns (EchoResponse);
     rpc Set (SetRequest) returns (google.protobuf.Empty);
     rpc Get (GetRequest) returns (GetResponse);
+    rpc Delete (DeleteRequest) returns (DeleteResponse);
+    rpc BatchDelete (BatchDeleteRequest) returns (BatchDeleteResponse);
+    rpc GetExpiredKeys (google.protobuf.Empty) returns (GetExpiredKeysResponse);
 }
 
 message EchoRequest {
@@ -23,6 +26,7 @@ message EchoResponse {
 message SetRequest {
     string id = 1;
     string value = 2;
+    int64 ttl = 3;
 }
 
 message GetRequest {
@@ -31,4 +35,24 @@ message GetRequest {
 
 message GetResponse {
     string value = 1;
+}
+
+message DeleteRequest {
+    string id = 1;
+}
+
+message DeleteResponse {
+    int64 delete_count = 1;
+}
+
+message BatchDeleteRequest {
+    repeated string ids = 1; 
+}
+
+message BatchDeleteResponse {
+    int64 deleteCount = 1;
+}
+
+message GetExpiredKeysResponse {
+    repeated string ids = 1;
 }

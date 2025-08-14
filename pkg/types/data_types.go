@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // ErrNoneCastable is an error indicating that a value cannot be cast to the desired type.
@@ -33,6 +34,12 @@ type ColumnValue interface {
 	ToString() string
 	// ToFloat converts the column value to a float64
 	ToFloat() (float64, error)
+}
+
+// ColumnValueWithTTL is a struct designed for storing Column data assocoated with its expiration.
+type ColumnValueWithTTL struct {
+	Column     ColumnValue
+	Expiration time.Time
 }
 
 // Integer represents a column value of integer type.

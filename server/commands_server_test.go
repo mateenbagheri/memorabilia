@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
+	"github.com/mateenbagheri/memorabilia/pkg/core"
 	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +16,8 @@ import (
 )
 
 func TestCommandServer_Echo_RandomString(t *testing.T) {
-	server := NewCommandServer()
-
+	repo := core.NewInMemoryCommandRepository()
+	server := NewCommandServer(repo)
 	echoMessage := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 10))
 	req := &api.EchoRequest{Message: echoMessage}
 	resp, err := server.Echo(context.Background(), req)
@@ -27,7 +28,8 @@ func TestCommandServer_Echo_RandomString(t *testing.T) {
 }
 
 func TestCommandServer_Echo_NilMessage(t *testing.T) {
-	server := NewCommandServer()
+	repo := core.NewInMemoryCommandRepository()
+	server := NewCommandServer(repo)
 	req := &api.EchoRequest{}
 	resp, err := server.Echo(context.Background(), req)
 
@@ -82,7 +84,9 @@ func startTestServer(t *testing.T) (*grpc.Server, chan error) {
 	}
 
 	s := grpc.NewServer()
-	api.RegisterCommandsServer(s, NewCommandServer())
+
+	repo := core.NewInMemoryCommandRepository()
+	api.RegisterCommandsServer(s, NewCommandServer(repo))
 
 	errCh := make(chan error, 1)
 	go func() {
