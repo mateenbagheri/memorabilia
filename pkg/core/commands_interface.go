@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"time"
+
+	"github.com/mateenbagheri/memorabilia/pkg/types"
 )
 
 // CommandsRepository is the interface each client needs to implement for
@@ -14,4 +16,8 @@ type CommandsRepository interface {
 	Delete(ctx context.Context, key string) (deleteCount int64)
 	GetExpiredKeys(ctx context.Context) (keys []string, err error)
 	Cleanup(ctx context.Context) (deleteCount int64, err error)
+
+	// Raft related
+	Dump() (map[string]types.ColumnValueWithTTL, error)
+	Load(map[string]types.ColumnValueWithTTL) error
 }

@@ -2,68 +2,92 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/mateenbagheri/memorabilia/api"
+	"github.com/mateenbagheri/memorabilia/pkg/cluster"
 	"github.com/mateenbagheri/memorabilia/pkg/core"
+	"github.com/mateenbagheri/memorabilia/pkg/replication"
 	"github.com/mateenbagheri/memorabilia/pkg/utils/schedule"
 	"google.golang.org/grpc"
 )
 
+// Server is the top-level process container. It owns the gRPC server, the
+// optional HTTP management server (Raft cluster operations), the TTL cleanup
+// scheduler, and — when replication is enabled — the Raft node.
+//
+// Server itself contains no business logic. It is purely a lifecycle:
+// construct the dependent servers, start them, wait for a signal, shut
+// everything down in order. The actual logic lives in:
+//   - CommandServer       (commands_server.go) — gRPC data operations
+//   - RaftHTTPHandler     (raft_http.go)        — HTTP cluster management
+//   - ScheduleCleanup     (cleanup.go)          — TTL expiry cleanup job
 type Server struct {
-	ttlCleanupTime     int64 // In Milliseconds
+	ttlCleanupTime     int64 // milliseconds
 	logger             *slog.Logger
-	port               string
+	grpcPort           string
+	httpMgmtAddr       string // e.g. "0.0.0.0:8081"
 	grpcServer         *grpc.Server
+	httpServer         *http.Server
 	scheduler          schedule.CronjobRepository
 	commandsRepository core.CommandsRepository
+
+	// Raft fields — nil when running in single-node mode without replication.
+	raftNode   *replication.Node
+	raftFSM    *replication.FSM
+	clusterCfg *cluster.Config
 }
 
+// Option configures a Server using the functional-options pattern.
 type Option func(*Server)
 
 func WithPort(port string) Option {
-	return func(s *Server) {
-		s.port = port
-	}
+	return func(s *Server) { s.grpcPort = port }
 }
 
 func WithLogger(logger *slog.Logger) Option {
-	return func(s *Server) {
-		s.logger = logger
-	}
+	return func(s *Server) { s.logger = logger }
 }
 
 func WithTTLCleanupTime(ttlCleanupTime int64) Option {
-	return func(s *Server) {
-		s.ttlCleanupTime = ttlCleanupTime
-	}
+	return func(s *Server) { s.ttlCleanupTime = ttlCleanupTime }
 }
 
 func WithScheduler(scheduler schedule.CronjobRepository) Option {
-	return func(s *Server) {
-		s.scheduler = scheduler
-	}
+	return func(s *Server) { s.scheduler = scheduler }
 }
 
 func WithCommandsRepository(repo core.CommandsRepository) Option {
+	return func(s *Server) { s.commandsRepository = repo }
+}
+
+func WithRaft(node *replication.Node, fsm *replication.FSM, cfg *cluster.Config) Option {
 	return func(s *Server) {
-		s.commandsRepository = repo
+		s.raftNode = node
+		s.raftFSM = fsm
+		s.clusterCfg = cfg
 	}
 }
 
+func WithHTTPMgmtAddr(addr string) Option {
+	return func(s *Server) { s.httpMgmtAddr = addr }
+}
+
+// New constructs a Server with defaults, then applies options.
 func New(options ...Option) *Server {
 	s := &Server{
-		port:               "50051",
+		grpcPort:           "50051",
+		httpMgmtAddr:       "0.0.0.0:8081",
 		logger:             slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})),
 		grpcServer:         grpc.NewServer(),
 		scheduler:          schedule.GetRobfigSchedulerInstance(),
-		ttlCleanupTime:     4000, // TODO: tweak this later on also add env set to this.
+		ttlCleanupTime:     60000,
 		commandsRepository: core.NewInMemoryCommandRepository(),
 	}
 
@@ -75,53 +99,90 @@ func New(options ...Option) *Server {
 }
 
 func (s *Server) Start() {
-	lis, err := net.Listen("tcp", ":"+s.port)
+	lis, err := net.Listen("tcp", ":"+s.grpcPort)
 	if err != nil {
 		s.logger.Error("failed to listen", slog.String("error", err.Error()))
 		return
 	}
 
-	commandServer := NewCommandServer(s.commandsRepository)
-	api.RegisterCommandsServer(s.grpcServer, commandServer)
+	api.RegisterCommandsServer(s.grpcServer, s.buildCommandServer())
 
-	// Channel to catch OS signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	go func() {
-		s.logger.Info("Starting gRPC server", slog.String("address", lis.Addr().String()))
-		if err := s.grpcServer.Serve(lis); err != nil {
-			s.logger.Error("failed to serve", slog.String("error", err.Error()))
-		}
-	}()
+	s.startGRPCServer(lis)
+	s.startHTTPManagementServer()
 
 	s.ScheduleCleanup()
 	s.scheduler.Start()
 
 	<-stop
-	s.logger.Info("Shutting down server...")
-	s.grpcServer.GracefulStop()
-	time.Sleep(2 * time.Second)
-	s.logger.Info("Application stopped")
+	s.shutdown()
 }
 
-func (s *Server) ScheduleCleanup() {
-	cleanUpTimeIntervalInSeconds := s.ttlCleanupTime / 1000
-	s.scheduler.ScheduleIntervalJob(fmt.Sprintf("%ds", cleanUpTimeIntervalInSeconds), func() {
-		s.logger.Info("Running TTL cleanup job ...", slog.Int64("interval in seconds", cleanUpTimeIntervalInSeconds))
+// buildCommandServer returns the gRPC CommandServer in the correct mode:
+// Raft-replicated if a node is configured, direct-to-repo otherwise.
+func (s *Server) buildCommandServer() *CommandServer {
+	if s.raftNode != nil {
+		return NewCommandServerWithRaft(s.raftFSM, s.raftNode)
+	}
+	return NewCommandServer(s.commandsRepository)
+}
 
-		// Create a dedicated new context for the cleanup task
-		// Note: This is a dedicated ctx because ScheduleCleanup is
-		// a background task not driven from a user/client request
-		ctx := context.Background()
-
-		deleteCount, err := s.commandsRepository.Cleanup(ctx)
-		if err != nil {
-			s.logger.Error("ScheduleCleanup is failing", slog.String("error", err.Error()))
+// startGRPCServer launches the gRPC server on a background goroutine.
+func (s *Server) startGRPCServer(lis net.Listener) {
+	go func() {
+		s.logger.Info("starting gRPC server", slog.String("address", lis.Addr().String()))
+		if err := s.grpcServer.Serve(lis); err != nil {
+			s.logger.Error("gRPC server error", slog.String("error", err.Error()))
 		}
+	}()
+}
 
-		if deleteCount > 0 {
-			s.logger.Info("ScheduleCleanup cleaned up keys from memory", slog.Int64("keys deleted", deleteCount))
+// startHTTPManagementServer launches the Raft cluster management HTTP server
+// (/raft/join, /raft/leader, /raft/peers) on a background goroutine.
+// It is a no-op when Raft is not enabled — single-node mode has nothing to
+// manage and binds no extra port.
+func (s *Server) startHTTPManagementServer() {
+	if s.raftNode == nil {
+		return
+	}
+
+	mux := http.NewServeMux()
+	NewRaftHTTPHandler(s.raftNode, s.logger).RegisterRoutes(mux)
+
+	s.httpServer = &http.Server{
+		Addr:    s.httpMgmtAddr,
+		Handler: mux,
+	}
+
+	go func() {
+		s.logger.Info("starting HTTP management server", slog.String("address", s.httpMgmtAddr))
+		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.logger.Error("HTTP management server error", slog.String("error", err.Error()))
 		}
-	})
+	}()
+}
+
+// shutdown stops all subsystems in dependency order: refuse new gRPC work
+// first, then close the HTTP management server, then stop Raft itself last
+func (s *Server) shutdown() {
+	s.logger.Info("shutting down...")
+
+	s.grpcServer.GracefulStop()
+
+	if s.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.httpServer.Shutdown(ctx)
+	}
+
+	if s.raftNode != nil {
+		if err := s.raftNode.Shutdown(); err != nil {
+			s.logger.Error("raft shutdown error", slog.String("error", err.Error()))
+		}
+	}
+
+	time.Sleep(2 * time.Second) // TODO: replace this with channel or waitgroup?
+	s.logger.Info("application stopped")
 }

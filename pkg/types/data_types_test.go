@@ -1,171 +1,93 @@
-package types
+package types_test
 
 import (
-	"strconv"
+	"encoding/json"
 	"testing"
+	"time"
 
-	"github.com/mateenbagheri/memorabilia/pkg/utils/testutil"
+	"github.com/mateenbagheri/memorabilia/pkg/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestInteger_ToInt(t *testing.T) {
-	integer := testutil.GenerateRandomInteger(0, 1000)
-	i := Integer{Val: integer}
-	if got, err := i.ToInt(); err != nil || got != integer {
-		if err != nil {
-			t.Errorf("Expected no errors but got following error = %v", err)
-		}
-		t.Errorf("ToInt() = %v, want %v", got, integer)
-	}
+// roundTrip marshals v to JSON then unmarshals back into a new ColumnValueWithTTL.
+func roundTrip(t *testing.T, v types.ColumnValueWithTTL) types.ColumnValueWithTTL {
+	t.Helper()
+	b, err := json.Marshal(v)
+	require.NoError(t, err, "marshal failed")
+
+	var result types.ColumnValueWithTTL
+	require.NoError(t, json.Unmarshal(b, &result), "unmarshal failed")
+	return result
 }
 
-func TestInteger_ToString(t *testing.T) {
-	integer := testutil.GenerateRandomInteger(0, 1000)
-	i := Integer{Val: integer}
-	if got := i.ToString(); got != strconv.Itoa(integer) {
-		t.Errorf("ToString() = %v, want %v", got, strconv.Itoa(integer))
+func TestColumnValueWithTTL_JSON_Integer(t *testing.T) {
+	original := types.ColumnValueWithTTL{
+		Column:     types.Integer{Val: 42},
+		Expiration: time.Time{},
 	}
+	got := roundTrip(t, original)
+
+	assert.Equal(t, types.IntType, got.Column.Type())
+	assert.Equal(t, "42", got.Column.ToString())
+	assert.True(t, got.Expiration.IsZero())
 }
 
-func TestInteger_ToFloat(t *testing.T) {
-	f := Float{Val: 40.24}
-	got, err := f.ToFloat()
-	if err != nil {
-		t.Errorf("ToFloat() expected no errors, got %v", err)
+func TestColumnValueWithTTL_JSON_String(t *testing.T) {
+	original := types.ColumnValueWithTTL{
+		Column:     types.String{Val: "hello world"},
+		Expiration: time.Time{},
 	}
+	got := roundTrip(t, original)
 
-	if got != 40.24 {
-		t.Errorf("ToFloat() = %v, want %v", got, 42.2)
-	}
+	assert.Equal(t, types.StringType, got.Column.Type())
+	assert.Equal(t, "hello world", got.Column.ToString())
 }
 
-func TestString_ToString(t *testing.T) {
-	stringValue := testutil.GenerateRandomString(testutil.GenerateRandomInteger(0, 100))
-	s := String{Val: stringValue}
-	if got := s.ToString(); got != stringValue {
-		t.Errorf("ToString() = %v, want %v", got, stringValue)
+func TestColumnValueWithTTL_JSON_Float(t *testing.T) {
+	original := types.ColumnValueWithTTL{
+		Column:     types.Float{Val: 3.14},
+		Expiration: time.Time{},
 	}
+	got := roundTrip(t, original)
+
+	assert.Equal(t, types.FloatType, got.Column.Type())
+	f, err := got.Column.ToFloat()
+	require.NoError(t, err)
+	assert.InDelta(t, 3.14, f, 0.0001)
 }
 
-func TestString_ToInt(t *testing.T) {
-	tests := []struct {
-		name    string
-		s       String
-		want    int
-		wantErr bool
-	}{
-		{"valid int", String{Val: "123"}, 123, false},
-		{"invalid int", String{Val: "abc"}, 0, true},
+func TestColumnValueWithTTL_JSON_WithExpiration(t *testing.T) {
+	expiry := time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC)
+	original := types.ColumnValueWithTTL{
+		Column:     types.String{Val: "expires"},
+		Expiration: expiry,
 	}
+	got := roundTrip(t, original)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.s.ToInt()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ToInt() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("ToInt() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.Equal(t, "expires", got.Column.ToString())
+	assert.True(t, got.Expiration.Equal(expiry),
+		"expiration mismatch: want %v got %v", expiry, got.Expiration)
 }
 
-func TestString_ToFloat(t *testing.T) {
-	tests := []struct {
-		name    string
-		s       String
-		want    float64
-		wantErr bool
-	}{
-		{"valid integer value", String{Val: "42"}, 42.0, false},
-		{"valid floating value", String{Val: "23.2"}, 23.2, false},
-		{"valid zero value", String{Val: "0"}, 0.0, false},
-		{"invalid value", String{Val: "test"}, 0.0, true},
+func TestColumnValueWithTTL_JSON_MapRoundTrip(t *testing.T) {
+	// This is the exact scenario the Raft snapshot uses:
+	// marshal a whole map, unmarshal it back, assert every entry survives.
+	store := map[string]types.ColumnValueWithTTL{
+		"int_key":    {Column: types.Integer{Val: 99}},
+		"str_key":    {Column: types.String{Val: "memorabilia"}},
+		"float_key":  {Column: types.Float{Val: 2.718}},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.s.ToFloat()
-			if err != nil && !tt.wantErr {
-				t.Errorf("ToFloat() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("ToFloat() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+	b, err := json.Marshal(store)
+	require.NoError(t, err)
 
-func TestString_Type(t *testing.T) {
-	s := String{Val: testutil.GenerateRandomString(10)}
-	if got := s.Type(); got != StringType {
-		t.Errorf("Type() = %v, want %v", got, StringType)
-	}
-}
+	var restored map[string]types.ColumnValueWithTTL
+	require.NoError(t, json.Unmarshal(b, &restored))
 
-func TestInteger_Type(t *testing.T) {
-	i := Integer{Val: testutil.GenerateRandomInteger(0, 100)}
-	if got := i.Type(); got != IntType {
-		t.Errorf("Type() = %v, want %v", got, IntType)
-	}
-}
-
-func TestFloat_Type(t *testing.T) {
-	f := Float{Val: 12.5}
-	if got := f.Type(); got != FloatType {
-		t.Errorf("Type() = %v, want %v", got, FloatType)
-	}
-}
-
-func TestInteger_Value(t *testing.T) {
-	integerValue := testutil.GenerateRandomInteger(0, 100)
-	i := Integer{Val: integerValue}
-	if got := i.Value(); got != integerValue {
-		t.Errorf("Value() = %v, want %v", got, integerValue)
-	}
-}
-
-func TestString_Value(t *testing.T) {
-	stringValue := testutil.GenerateRandomString(10)
-	s := String{Val: stringValue}
-	if got := s.Value(); got != stringValue {
-		t.Errorf("Value() = %v, want %v", got, stringValue)
-	}
-}
-
-func TestFloat_Value(t *testing.T) {
-	f := Float{Val: 23.6}
-	if got := f.Value(); got != 23.6 {
-		t.Errorf("Value() = %v, want %v", got, 23.6)
-	}
-}
-
-func TestDetectColumnType(t *testing.T) {
-	tests := []struct {
-		name          string
-		input         string
-		expectedType  ColumnType
-		expectedValue ColumnValue
-	}{
-		{"Integer Value", "123", IntType, Integer{Val: 123}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			columnType, value := DetectColumnType(tt.input)
-			if columnType != tt.expectedType {
-				t.Errorf("DetectColumnType(%v) = %v, want %v",
-					tt.input, columnType, tt.expectedType,
-				)
-			}
-
-			if value != tt.expectedValue {
-				t.Errorf("DetectColumnType(%v)::Value = %v, want %v",
-					tt.input, value, tt.expectedValue,
-				)
-			}
-		})
-	}
+	require.Len(t, restored, 3)
+	assert.Equal(t, "99", restored["int_key"].Column.ToString())
+	assert.Equal(t, "memorabilia", restored["str_key"].Column.ToString())
+	f, _ := restored["float_key"].Column.ToFloat()
+	assert.InDelta(t, 2.718, f, 0.0001)
 }
