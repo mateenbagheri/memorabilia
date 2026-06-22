@@ -65,7 +65,12 @@ func (cs *CommandServer) Get(ctx context.Context, in *api.GetRequest) (*api.GetR
 
 func (cs *CommandServer) Set(ctx context.Context, in *api.SetRequest) (*emptypb.Empty, error) {
 	ttl := time.Duration(in.Ttl)
-	expiration := time.Now().Add(ttl * time.Millisecond)
+	var expiration time.Time
+	if in.GetTtl() == 0 {
+		expiration = time.Time{}
+	} else {
+		expiration = time.Now().Add(ttl * time.Millisecond)
+	}
 	if cs.isRaftMode() {
 		if err := cs.requireleader(); err != nil {
 			return nil, err
