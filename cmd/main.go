@@ -15,43 +15,66 @@ import (
 	"github.com/mateenbagheri/memorabilia/server"
 )
 
+const (
+	// Environment variables
+	envPort          = "MEMORABILIA_PORT"
+	envTTLCleanupMS  = "MEMORABILIA_TTL_CLEANUP_MS"
+	envNodeID        = "MEMORABILIA_NODE_ID"
+	envRaftAddr      = "MEMORABILIA_RAFT_ADDR"
+	envAdvertiseAddr = "MEMORABILIA_ADVERTISE_ADDR"
+	envHTTPMgmtAddr  = "MEMORABILIA_HTTP_MGMT_ADDR"
+	envDataDir       = "MEMORABILIA_DATA_DIR"
+	envBootstrap     = "MEMORABILIA_BOOTSTRAP"
+	envLeaderHTTP    = "MEMORABILIA_LEADER_HTTP"
+
+	// Defaults
+	defaultGRPCPort     = "50051"
+	defaultRaftAddr     = "0.0.0.0:7000"
+	defaultHTTPMgmtAddr = "0.0.0.0:8081"
+	defaultDataDir      = "./data"
+	defaultTTLCleanupMS = int64(60000)
+
+	// Raft settings
+	clusterJoinTimeout = 10 * time.Second
+)
+
 func main() {
 	// General flags (in both single node and Raft mode)
 	grpcPort := flag.String("port",
-		envOrDefault("MEMORABILIA_PORT", "50051"),
+		envOrDefault(envPort, defaultGRPCPort),
 		"gRPC server port")
 
 	ttlCleanupMs := flag.Int64("ttl-cleanup-ms",
-		envOrDefaultInt64("MEMORABILIA_TTL_CLEANUP_MS", 60000),
+		envOrDefaultInt64(envTTLCleanupMS, defaultTTLCleanupMS),
 		"TTL cleanup job interval in milliseconds")
 
 	// Raft flags (only matters when --node-id is set)
 	nodeID := flag.String("node-id",
-		envOrDefault("MEMORABILIA_NODE_ID", ""),
+		envOrDefault(envNodeID, ""),
 		"Unique node ID, e.g. 'n1'. Setting this enables Raft replication mode.")
 
 	raftAddr := flag.String("raft-addr",
-		envOrDefault("MEMORABILIA_RAFT_ADDR", "0.0.0.0:7000"),
+		envOrDefault(envRaftAddr, defaultRaftAddr),
 		"Raft TCP bind address")
 
 	advertiseAddr := flag.String("advertise-addr",
-		envOrDefault("MEMORABILIA_ADVERTISE_ADDR", ""),
+		envOrDefault(envAdvertiseAddr, ""),
 		"Raft advertise address (defaults to raft-addr; set when behind NAT/Docker)")
 
 	httpMgmtAddr := flag.String("http-mgmt-addr",
-		envOrDefault("MEMORABILIA_HTTP_MGMT_ADDR", "0.0.0.0:8081"),
+		envOrDefault(envHTTPMgmtAddr, defaultHTTPMgmtAddr),
 		"HTTP management server address (/raft/join, /raft/leader, /raft/peers)")
 
 	dataDir := flag.String("data-dir",
-		envOrDefault("MEMORABILIA_DATA_DIR", "./data"),
+		envOrDefault(envDataDir, defaultDataDir),
 		"Base directory for Raft log, stable store, and snapshots (a subdirectory per node-id is created automatically)")
 
 	bootstrap := flag.Bool("bootstrap",
-		envOrDefaultBool("MEMORABILIA_BOOTSTRAP", false),
+		envOrDefaultBool(envBootstrap, false),
 		"Bootstrap a brand-new single-node cluster. Set true on the FIRST node only, on its FIRST run only.")
 
 	leaderHTTP := flag.String("leader-http",
-		envOrDefault("MEMORABILIA_LEADER_HTTP", ""),
+		envOrDefault(envLeaderHTTP, ""),
 		"HTTP management address of the cluster leader to join, e.g. '127.0.0.1:8081'")
 
 	flag.Parse()
@@ -93,7 +116,7 @@ func main() {
 
 	// Non-bootstrap nodes register with the cluster before serving traffic.
 	if !cfg.Bootstrap && cfg.LeaderHTTPAddr != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), clusterJoinTimeout)
 		defer cancel()
 		logger.Info("joining cluster via leader", slog.String("leaderHTTP", cfg.LeaderHTTPAddr))
 		if err := raftNode.JoinViaLeader(ctx, cfg.LeaderHTTPAddr, cfg.NodeID, cfg.RaftBindAddr); err != nil {
