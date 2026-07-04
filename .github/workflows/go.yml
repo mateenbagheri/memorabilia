@@ -46,9 +46,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: "1.22"
+  GO_VERSION: "1.26"
   BINARY_PATH: "bin/server"
-  CGO_ENABLED: "0"
+  CGO_ENABLED: "1"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # VALIDATE
