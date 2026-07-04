@@ -74,9 +74,9 @@ func TestColumnValueWithTTL_JSON_MapRoundTrip(t *testing.T) {
 	// This is the exact scenario the Raft snapshot uses:
 	// marshal a whole map, unmarshal it back, assert every entry survives.
 	store := map[string]types.ColumnValueWithTTL{
-		"int_key":    {Column: types.Integer{Val: 99}},
-		"str_key":    {Column: types.String{Val: "memorabilia"}},
-		"float_key":  {Column: types.Float{Val: 2.718}},
+		"int_key":   {Column: types.Integer{Val: 99}},
+		"str_key":   {Column: types.String{Val: "memorabilia"}},
+		"float_key": {Column: types.Float{Val: 2.718}},
 	}
 
 	b, err := json.Marshal(store)
