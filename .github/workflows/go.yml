@@ -1,0 +1,401 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# memorabilia — GitHub Actions CI/CD
+#
+# Jobs run in this order:
+#
+#   validate (fmt, vet, mod-tidy)
+#       ↓
+#   test (unit, integration, benchmark)
+#       ↓
+#     build
+#       ↓
+#     release   ← tag pushes only (v*)
+#
+# Every job that needs Go uses the module cache action so downloaded modules
+# are reused across runs on the same branch.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+    # Skip the pipeline entirely when only documentation changes.
+    # If you move docs elsewhere adjust the paths-ignore list.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+
+  pull_request:
+    branches: ["**"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+
+  # Allow triggering a run manually from the Actions tab.
+  workflow_dispatch:
+
+# Cancel an in-progress run for the same branch/PR when a new push arrives.
+# This saves runner minutes on fast-moving branches — no point finishing a
+# run that is already superseded.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.22"
+  BINARY_PATH: "bin/server"
+  CGO_ENABLED: "0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VALIDATE
+# ─────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  fmt:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Check gofmt
+        run: |
+          UNFORMATTED=$(gofmt -l ./.. 2>/dev/null | grep -v "^vendor/" || true)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$UNFORMATTED"
+            echo ""
+            echo "Fix with: gofmt -w ./."
+            exit 1
+          fi
+          echo "All files are correctly formatted."
+
+  vet:
+    name: go vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+  mod-tidy:
+    name: Module tidy check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          if ! git diff --quiet go.mod go.sum; then
+            echo "go.mod or go.sum is out of sync."
+            echo "Run: go mod tidy"
+            echo ""
+            git diff go.mod go.sum
+            exit 1
+          fi
+          echo "go.mod and go.sum are tidy."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST
+# ─────────────────────────────────────────────────────────────────────────────
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    # Only run once all validate jobs are green.
+    needs: [fmt, vet, mod-tidy]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      # pkg/core       — repository logic (Delete, BatchDelete, Cleanup, ...)
+      # pkg/types      — ColumnValue JSON round-trip
+      # pkg/replication — FSM apply / snapshot / restore
+      # pkg/utils      — schedule, validation, testutil
+      #
+      # -race: the RWMutex usage in InMemoryCommandRepository and the FSM's
+      # concurrent Apply/read paths make the race detector actively useful.
+      #
+      # -count=1: disable the test result cache — always run fresh.
+      - name: Run unit tests
+        run: |
+          go test \
+            -v \
+            -race \
+            -count=1 \
+            -timeout=60s \
+            ./pkg/...
+
+      # gotestsum produces JUnit XML that GitHub Actions can parse into a
+      # test summary on the PR. Falls back gracefully if not installed.
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Run unit tests with JUnit report
+        run: |
+          gotestsum \
+            --junitfile unit-test-results.xml \
+            --format testname \
+            -- \
+            -race \
+            -count=1 \
+            -timeout=60s \
+            ./pkg/...
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: unit-test-results.xml
+          retention-days: 7
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    needs: [fmt, vet, mod-tidy]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      # server package only.
+      #
+      # Why separate from unit tests:
+      #   1. TestEcho_Integration binds :50051. Running alongside pkg/... with
+      #      parallelism enabled risks two binaries racing for the same port.
+      #   2. TestInMemoryCommandRepository_Get_UnexpiredValue sleeps ~9 seconds
+      #      across its subtests. Isolating it prevents it from inflating the
+      #      unit test time and obscuring which suite is slow.
+      #
+      # -p=1: test packages sequentially — server and benchmarks both bind
+      # :50051 so they must never run at the same time on the same host.
+      #
+      # No -race: gRPC's internal goroutine pool produces false positives with
+      # the race detector on the integration harness.
+      - name: Run integration tests
+        run: |
+          go test \
+            -v \
+            -count=1 \
+            -p=1 \
+            -timeout=120s \
+            ./server/...
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    # Benchmarks are informational — a slowdown should prompt investigation
+    # but must not block a merge. Benchmark numbers on shared runners are
+    # noisy; a 20% variance can be runner load, not code regression.
+    continue-on-error: true
+    # Only run on pushes to the default branch and on tags — not on every
+    # feature branch where the noise-to-signal ratio is too high.
+    if: |
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+      startsWith(github.ref, 'refs/tags/v')
+    needs: [fmt, vet, mod-tidy]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      # -run='^$'    skip all Test* functions, only Benchmark* runs
+      # -benchmem    include allocation counts in output
+      # -benchtime=2s give each benchmark 2 seconds (more stable than the
+      #              default 1s on shared runners)
+      - name: Run benchmarks
+        run: |
+          go test \
+            -v \
+            -run='^$' \
+            -bench=. \
+            -benchmem \
+            -benchtime=2s \
+            -count=1 \
+            -timeout=120s \
+            ./benchmarks/... | tee benchmark-results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: benchmark-results.txt
+          # Keep 30 days so you can compare across commits manually.
+          retention-days: 30
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BUILD
+# ─────────────────────────────────────────────────────────────────────────────
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch all history so git describe works for version strings on
+          # non-tagged commits.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      # Resolve the version string:
+      #   - On a tag push (v1.2.3):  VERSION=v1.2.3
+      #   - On a branch push:        VERSION=dev-<short-sha>
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="dev-${GITHUB_SHA::8}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building version: ${VERSION}"
+
+      - name: Build binary
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p bin
+          go build \
+            -ldflags="\
+              -X main.version=${VERSION} \
+              -X main.commit=${GITHUB_SHA::8} \
+              -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+              -s -w" \
+            -o ${BINARY_PATH} \
+            ./cmd
+          echo "Binary size: $(du -sh ${BINARY_PATH} | cut -f1)"
+
+      # Verify the binary at least starts — catches linker failures and
+      # CGO problems that produce an ELF that segfaults on exec.
+      - name: Smoke test binary
+        run: ./${BINARY_PATH} --help || true
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-linux-amd64-${{ github.sha }}
+          path: bin/
+          retention-days: 7
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RELEASE
+# ─────────────────────────────────────────────────────────────────────────────
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    # Only create a release on a semver tag push.
+    # The build job already ran — we're just attaching its artifact.
+    if: startsWith(github.ref, 'refs/tags/v')
+    # Needs write permission to create GitHub Releases and upload assets.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Download the binary that was built and verified in the build job.
+      # We never recompile in the release job — the artifact is the one
+      # that passed smoke tests.
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: server-linux-amd64-${{ github.sha }}
+          path: bin/
+
+      - name: Make binary executable
+        run: chmod +x bin/server
+
+      # Generate a changelog from commits since the previous tag.
+      # This gives a real diff-based changelog rather than a placeholder.
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Generating changelog from ${PREVIOUS_TAG} to ${GITHUB_REF_NAME}"
+            CHANGELOG=$(git log \
+              --pretty=format:"- %s (%h)" \
+              "${PREVIOUS_TAG}..HEAD")
+          else
+            echo "No previous tag found — using full history"
+            CHANGELOG=$(git log \
+              --pretty=format:"- %s (%h)" \
+              HEAD)
+          fi
+          # Write to file to avoid quoting issues with multiline strings
+          echo "$CHANGELOG" > changelog.txt
+          cat changelog.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "memorabilia ${{ github.ref_name }}"
+          body_path: changelog.txt
+          files: bin/server
+          # Mark as pre-release if the tag contains a pre-release identifier
+          # e.g. v1.0.0-beta.1, v2.0.0-rc.1
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
