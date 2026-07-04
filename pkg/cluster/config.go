@@ -9,7 +9,7 @@ type Config struct {
 
 	// AdvertiseAddr is the address other peers dial to reach this node.
 	// Leave empty to use RaftBindAddr. I saw they use this in cases where
-	// node sits behind a NAT or Docker service. Since I am not sure how 
+	// node sits behind a NAT or Docker service. Since I am not sure how
 	// this project will continue, I have decided to add this. No harm done
 	// compared to probable benefits
 	// Example: "10.0.1.5:7000"
